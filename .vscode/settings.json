@@ -1,0 +1,16 @@
+{
+    "files.associations": {
+        "shader.h": "c",
+        "mesh.h": "c",
+        "stb_rect_pack.h": "c",
+        "stb_truetype.h": "c",
+        "skybox.h": "c",
+        "text.h": "c",
+        "*.rh": "cpp",
+        "world.h": "c",
+        "utils.h": "c",
+        "log.h": "c",
+        "blocks.h": "c",
+        "window.h": "c"
+    }
+}

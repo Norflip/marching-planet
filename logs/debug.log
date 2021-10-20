@@ -1,0 +1,12 @@
+2021-10-20 21:21:49 INFO  main.c:171: Renderer: NVIDIA GeForce GTX 1080/PCIe/SSE2
+2021-10-20 21:21:49 INFO  main.c:172: OpenGL version supported 4.5.0 NVIDIA 465.89
+2021-10-20 21:21:49 INFO  ./src/shader.c:34: Read 312 bytes [resources/shaders/skybox.vs]
+2021-10-20 21:21:49 INFO  ./src/shader.c:34: Read 636 bytes [resources/shaders/skybox.fs]
+2021-10-20 21:21:49 INFO  ./src/shader.c:34: Read 703 bytes [resources/mesh.glsl]
+2021-10-20 21:21:49 INFO  ./src/shader.c:34: Read 781 bytes [resources/density.glsl]
+2021-10-20 21:21:49 INFO  ./src/gameplay/planet.c:123: 
+Generated density
+
+2021-10-20 21:21:49 INFO  main.c:59: Starting loop
+2021-10-20 21:21:49 INFO  main.c:87: AA
+2021-10-20 21:21:49 INFO  main.c:91: BB
