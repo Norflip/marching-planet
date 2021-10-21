@@ -7,8 +7,8 @@
 #include "../shader.h"
 #include "../log.h"
 
-#define CHUNK_AXIS_POINTS 16
-#define CHUNK_AXIS_VOXELS 15
+#define CHUNK_AXIS_POINTS 8
+#define CHUNK_AXIS_VOXELS (CHUNK_AXIS_POINTS - 1)
 #define PLANET_TEXTURE_RESOLUTION 32
 
 #define CHUNK_VOLUME (CHUNK_AXIS_POINTS * CHUNK_AXIS_POINTS * CHUNK_AXIS_POINTS)
@@ -173,7 +173,7 @@ void planet_update(Planet *planet)
 
             glUniform1i(0, PLANET_TEXTURE_RESOLUTION);
             glUniform1f(1, planet->size);
-            glUniform3i(2, chunk->x * CHUNK_AXIS_POINTS, chunk->y * CHUNK_AXIS_POINTS, chunk->z * CHUNK_AXIS_POINTS,);
+            glUniform3i(2, chunk->x * CHUNK_AXIS_POINTS, chunk->y * CHUNK_AXIS_POINTS, chunk->z * CHUNK_AXIS_POINTS);
 
 
             
@@ -206,7 +206,7 @@ void planet_update(Planet *planet)
 
 
             
-            printf("VERTEX_COUNT: %i\n", chunk->vertex_count);
+           // printf("VERTEX_COUNT: %i\n", chunk->vertex_count);
 
             //generate vertex array
             glBindVertexArray(chunk->vao);
@@ -219,7 +219,7 @@ void planet_update(Planet *planet)
 
             glBindVertexArray(0);
                 
-            //chunk->flag &= ~CHUNK_FLAG_DIRTY;
+            chunk->flag &= ~CHUNK_FLAG_DIRTY;
         }
     }
 }
@@ -248,5 +248,5 @@ void planet_draw(Camera* camera, Planet *planet)
 
 void planet_release(Planet *planet)
 {
-
+    free(planet->chunks);
 }

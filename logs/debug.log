@@ -1,14 +1,13 @@
-2021-10-21 16:00:04 INFO  main.c:164: Renderer: NVIDIA GeForce GTX 1080/PCIe/SSE2
-2021-10-21 16:00:04 INFO  main.c:165: OpenGL version supported 4.5.0 NVIDIA 465.89
-2021-10-21 16:00:04 INFO  ./src/shader.c:35: Read 312 bytes [resources/shaders/skybox.vs]
-2021-10-21 16:00:04 INFO  ./src/shader.c:35: Read 636 bytes [resources/shaders/skybox.fs]
-2021-10-21 16:00:04 INFO  ./src/shader.c:35: Read 3143 bytes [resources/mesh.glsl]
-2021-10-21 16:00:04 INFO  ./src/shader.c:35: Read 17531 bytes [resources/marchtable.glsl]
-2021-10-21 16:00:05 INFO  ./src/shader.c:35: Read 781 bytes [resources/density.glsl]
-2021-10-21 16:00:05 INFO  ./src/shader.c:35: Read 275 bytes [resources/shaders/planet.vs]
-2021-10-21 16:00:05 INFO  ./src/shader.c:35: Read 239 bytes [resources/shaders/planet.fs]
-2021-10-21 16:00:05 INFO  ./src/gameplay/planet.c:125: 
+2021-10-21 19:56:39 INFO  main.c:164: Renderer: Mesa Intel(R) HD Graphics 520 (SKL GT2)
+2021-10-21 19:56:39 INFO  main.c:165: OpenGL version supported 4.6 (Core Profile) Mesa 21.0.3
+2021-10-21 19:56:39 INFO  ./src/shader.c:35: Read 298 bytes [resources/shaders/skybox.vs]
+2021-10-21 19:56:39 INFO  ./src/shader.c:35: Read 611 bytes [resources/shaders/skybox.fs]
+2021-10-21 19:56:39 INFO  ./src/shader.c:35: Read 20212 bytes [resources/mesh.glsl]
+2021-10-21 19:56:39 INFO  ./src/shader.c:35: Read 754 bytes [resources/density.glsl]
+2021-10-21 19:56:39 INFO  ./src/shader.c:35: Read 291 bytes [resources/shaders/planet.vs]
+2021-10-21 19:56:39 INFO  ./src/shader.c:35: Read 227 bytes [resources/shaders/planet.fs]
+2021-10-21 19:56:39 INFO  ./src/gameplay/planet.c:125: 
 Generated density
 
-2021-10-21 16:00:05 INFO  main.c:59: Starting loop
-2021-10-21 16:00:08 INFO  main.c:91: exiting
+2021-10-21 19:56:39 INFO  main.c:59: Starting loop
+2021-10-21 19:57:13 INFO  main.c:91: exiting

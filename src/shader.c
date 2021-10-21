@@ -218,15 +218,17 @@ void shader_reload(Shader *shader)
 
 void shader_bind(Shader *shader)
 {
-    if (bound_program != shader->program)
+    //if (bound_program != shader->program)
     {
         //TODO: renderdoc detected an invalid enum in CullFace
-        glCullFace(shader->cullMode);
+        //glCullFace(shader->cullMode);
 
+        /*
         if (shader->transparancy)
             glEnable(GL_BLEND);
         else
             glDisable(GL_BLEND);
+        */
 
         glUseProgram(shader->program);
         bound_program = shader->program;
