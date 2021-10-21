@@ -7,9 +7,9 @@
 #include "../shader.h"
 #include "../log.h"
 
-#define CHUNK_AXIS_POINTS 8
+#define CHUNK_AXIS_POINTS 16
 #define CHUNK_AXIS_VOXELS (CHUNK_AXIS_POINTS - 1)
-#define PLANET_TEXTURE_RESOLUTION 32
+#define PLANET_TEXTURE_RESOLUTION 128
 
 #define CHUNK_VOLUME (CHUNK_AXIS_POINTS * CHUNK_AXIS_POINTS * CHUNK_AXIS_POINTS)
 #define PLANET_DENSITY_VOLUME (PLANET_TEXTURE_RESOLUTION * PLANET_TEXTURE_RESOLUTION * PLANET_TEXTURE_RESOLUTION)
@@ -30,7 +30,11 @@ struct Chunk
     // MESH DATA
     GLuint vao;
     GLuint vbo;
+    GLuint counter;
+
     size_t vertex_count;
+
+    vec3 bounds[2];
 };
 
 struct Planet
@@ -44,7 +48,7 @@ struct Planet
 
 static ComputeShader *meshCS = NULL;
 static ComputeShader *densityCS = NULL;
-static Shader* planetShader = NULL;
+static Shader *planetShader = NULL;
 
 void planet_load_shared(void)
 {
@@ -91,8 +95,24 @@ Planet *planet_generate(void)
                 chunk->z = z;
                 chunk->vertex_count = 0;
 
+                // CHUNK BOUNDS
+                float mx = x * CHUNK_AXIS_POINTS;
+                float my = y * CHUNK_AXIS_POINTS;
+                float mz = z * CHUNK_AXIS_POINTS;
+                glm_vec3_copy((vec3){mx, my, mz}, chunk->bounds[0]);
+                glm_vec3_copy((vec3){mx + CHUNK_AXIS_POINTS, my + CHUNK_AXIS_POINTS, mz + CHUNK_AXIS_POINTS}, chunk->bounds[1]);
+
+                glGenBuffers(1, &chunk->counter);
                 glGenBuffers(1, &chunk->vbo);
                 glGenVertexArrays(1, &chunk->vao);
+
+                // kanske måste flyttas till update om chunks ändras utanför init
+                const int max_verts = CHUNK_VOLUME * 5 * 3;
+                const int vertex_size = 4 * sizeof(float);
+                glBindBuffer(GL_SHADER_STORAGE_BUFFER, chunk->vbo);
+                glBufferData(GL_SHADER_STORAGE_BUFFER, max_verts * vertex_size, NULL, GL_DYNAMIC_DRAW);
+                glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+
                 index++;
             }
         }
@@ -136,47 +156,34 @@ void planet_update(Planet *planet)
         {
 
             /*
-        COUNTER BUFFER
-    */
-            GLuint counter_buffer;
-            glGenBuffers(1, &counter_buffer);
-            glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, counter_buffer);
+                COUNTER BUFFER
+            */
+            glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, chunk->counter);
             glBufferData(GL_ATOMIC_COUNTER_BUFFER, sizeof(GLuint), NULL, GL_DYNAMIC_DRAW);
             glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, 0);
 
             /*
-        MESH BUFFER
-    */
-            const int max_tris = CHUNK_VOLUME * 5;
-            const int max_verts = max_tris * 3;
+                MESH BUFFER
+            */
+            const int max_verts = CHUNK_VOLUME * 5 * 3;
             const int vertex_size = 4 * sizeof(float);
 
-            // borde kunna flyttas till init?
-            glBindBuffer(GL_SHADER_STORAGE_BUFFER, chunk->vbo);
-            glBufferData(GL_SHADER_STORAGE_BUFFER, max_verts * vertex_size, NULL, GL_DYNAMIC_DRAW);
-            
-            
-            glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
-
-
-            //bind and dispatch shader
-            glUseProgram(meshCS->program);
-            glBindBufferBase(GL_ATOMIC_COUNTER_BUFFER, 0, counter_buffer);
-            glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, chunk->vbo);
-            glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, planet->densityBuffer);
 
             /*
             layout (location = 0) uniform int textureSize;
             layout (location = 1) uniform float planetSize;
             layout (location = 2) uniform ivec3 chunkCoord;
             */
+            //bind and dispatch shader
+            glUseProgram(meshCS->program);
+            glBindBufferBase(GL_ATOMIC_COUNTER_BUFFER, 0, chunk->counter);
+            glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, chunk->vbo);
+            glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, planet->densityBuffer);
 
             glUniform1i(0, PLANET_TEXTURE_RESOLUTION);
             glUniform1f(1, planet->size);
             glUniform3i(2, chunk->x * CHUNK_AXIS_POINTS, chunk->y * CHUNK_AXIS_POINTS, chunk->z * CHUNK_AXIS_POINTS);
 
-
-            
             int threadgroups = CHUNK_AXIS_POINTS / 8.0f;
             glDispatchCompute(threadgroups, threadgroups, threadgroups);
 
@@ -187,16 +194,10 @@ void planet_update(Planet *planet)
                 log_error("Failed to run meshCS [%s]", desc);
             }
 
-
-
             glMemoryBarrier(GL_ALL_BARRIER_BITS);
 
 
-
-           //glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, counter_buffer);
-            
-            
-            
+            // detta kan skippas med indirect rendering, men värdet måste gångras med 3... vilket kanske inte är värt en glUseProgram
             GLuint triangle_count = *((GLuint *)glMapBufferRange(GL_ATOMIC_COUNTER_BUFFER, 0, sizeof(GLuint), GL_MAP_READ_BIT));
             chunk->vertex_count = triangle_count * 3;
             glUnmapBuffer(GL_ATOMIC_COUNTER_BUFFER);
@@ -204,13 +205,7 @@ void planet_update(Planet *planet)
 
 
 
-
-            
-           // printf("VERTEX_COUNT: %i\n", chunk->vertex_count);
-
-            //generate vertex array
             glBindVertexArray(chunk->vao);
-            // binds to the vertex array
             glBindBuffer(GL_ARRAY_BUFFER, chunk->vbo);
 
             // position attribute
@@ -218,32 +213,46 @@ void planet_update(Planet *planet)
             glEnableVertexAttribArray(0);
 
             glBindVertexArray(0);
-                
+
+
+
+
             chunk->flag &= ~CHUNK_FLAG_DIRTY;
         }
     }
 }
 
-void planet_draw(Camera* camera, Planet *planet)
+void planet_draw(Camera *camera, Planet *planet)
 {
     mat4 id;
     glm_mat4_identity(id);
 
     // set shader
     shader_bind(planetShader);
+    // vs
     glUniformMatrix4fv(0, 1, GL_FALSE, (float *)camera->projectionView);
     glUniformMatrix4fv(1, 1, GL_FALSE, (float *)id);
+    glUniform3f(2, PLANET_TEXTURE_RESOLUTION * 0.5f, PLANET_TEXTURE_RESOLUTION * 0.5f, PLANET_TEXTURE_RESOLUTION * 0.5f);
+    // fs
+    glUniform3f(8, 1.0f, 1.0f, 1.0f);
+
+    size_t in_frustum_counter = 0;
 
     for (size_t i = 0; i < planet->chunkCount; i++)
     {
         Chunk *chunk = &planet->chunks[i];
 
-        if(chunk->vertex_count > 0)
+        if (chunk->vertex_count > 0 && glm_aabb_frustum(chunk->bounds, camera->frustum_planes))
         {
+            // glDrawArraysIndirect
             glBindVertexArray(chunk->vao);
-            glDrawArrays(GL_TRIANGLES, 0, chunk->vertex_count);   
+            glDrawArrays(GL_TRIANGLES, 0, chunk->vertex_count);
+
+            in_frustum_counter++;
         }
     }
+
+    //printf("in frustum: %i / %i\n", (int)in_frustum_counter, (int)planet->chunkCount);
 }
 
 void planet_release(Planet *planet)

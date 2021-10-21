@@ -2,7 +2,29 @@
 
 static Camera *main_cam = NULL;
 
-void camera_update(Camera *camera, GLFWwindow *window, const float dt)
+void camera_initialize(Camera* camera, int width, int height)
+{
+    camera->fov = DEFAULT_FOV;
+    camera->near = DEFAULT_NEAR_PLANE;
+    camera->far = DEFAULT_FAR_PLANE;
+
+    glm_vec3_copy((vec3){0, 0, 0}, camera->position);
+    glm_vec3_copy((vec3){0.0f, 0.0f, -1.0f}, camera->forward);
+    glm_vec3_copy((vec3){0, 1, 0}, camera->up);
+    
+    glm_look(camera->position, camera->forward, camera->up, camera->view);
+    camera_resize(camera, width, height);
+}
+
+void camera_resize(Camera* camera, int width, int height)
+{
+    const float aspect = (float)width / (float)height;
+    glm_perspective(glm_rad(camera->fov), aspect, camera->near, camera->far, camera->projection);
+    glm_mat4_inv(camera->projection, camera->inv_projection);
+    glm_mat4_mul(camera->projection, camera->view, camera->projectionView);
+}
+
+void camera_update_fps(Camera *camera, GLFWwindow *window, const float dt)
 {
     main_cam = camera;
 
@@ -77,7 +99,7 @@ void camera_update(Camera *camera, GLFWwindow *window, const float dt)
     // rotate delta by camera direction
     if (camera->dirty)
     {
-        main_cam->xRotation += rotation_offset * ROTATION_SPEED * dt;
+        camera->xRotation += rotation_offset * ROTATION_SPEED * dt;
 
         //printf("camera_pos: %f, %f, %f\n", camera->position[0], camera->position[1], camera->position[2]);
         const float co_p = cos(glm_rad(camera->yRotation));
@@ -87,7 +109,14 @@ void camera_update(Camera *camera, GLFWwindow *window, const float dt)
 
         glm_look(camera->position, camera->forward, camera->up, camera->view);
         glm_mat4_mul(camera->projection, camera->view, camera->projectionView);
-        //glm_frustum_planes(camera_view_projection, camera_frustum);
+
+        glm_frustum_planes(camera->projectionView, camera->frustum_planes);
+
+        /*
+        for (size_t i = 0; i < 6; i++)
+            printf("FPLANE [%i]: %f, %f, %f, %f\n", (int)i, camera->frustum_planes[i][0], camera->frustum_planes[i][1], camera->frustum_planes[i][2], camera->frustum_planes[i][3]);
+        */
+        
         camera->dirty = false;
     }
 
