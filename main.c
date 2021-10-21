@@ -22,7 +22,11 @@ static GLFWmonitor *monitor;
 static int initialize_gl(int width, int height, const char *title);
 static void error_callback(int e, const char *d);
 static void resize_callback(GLFWwindow *window, int width, int height);
+
 static void key_callback(GLFWwindow *window, int key, int scancode, int action, int mods);
+static void mouse_button_callback(GLFWwindow* window, int button, int action, int mods);
+
+
 static void toggle_wireframemode();
 static void toggle_fullscreen();
 
@@ -36,20 +40,34 @@ static bool fullscreen = false;
 static int screen_x, screen_y, screen_width, screen_height;
 static Camera camera = {0};
 
+static void _update_fps_counter(GLFWwindow* window) {
+  
+  static double previous_seconds = -1000;
+  static int frame_count;
+  
+  if(previous_seconds == -1000)
+    previous_seconds = glfwGetTime();
+
+  double current_seconds = glfwGetTime();
+  double elapsed_seconds = current_seconds - previous_seconds;
+  if (elapsed_seconds > 0.25) {
+    previous_seconds = current_seconds;
+    double fps = (double)frame_count / elapsed_seconds;
+    char tmp[128];
+    sprintf(tmp, "opengl @ fps: %.2f", fps);
+    glfwSetWindowTitle(window, tmp);
+    frame_count = 0;
+  }
+  frame_count++;
+}
+
 int main()
 {
     log_add_fp(fopen("logs/debug.log", "wb"), 0);
 
     initialize_gl(screenWidth, screenHeight, "Planet");
 
-    glm_vec3_copy((vec3){0.0f, 0.0f, -1.0f}, camera.forward);
-    glm_vec3_copy((vec3){0, 1, 0}, camera.up);
-    glm_look(camera.position, camera.forward, camera.up, camera.view);
-
-    glm_perspective(glm_rad(FOV), SCREEN_ASPECT, NEAR_PLANE, FAR_PLANE, camera.projection);
-    glm_mat4_inv(camera.projection, camera.inv_projection);
-    glm_mat4_mul(camera.projection, camera.view, camera.projectionView);
-
+    camera_initialize(&camera, screenWidth, screenHeight);
     sky_initialize();
 
     planet_load_shared();
@@ -60,23 +78,21 @@ int main()
 
     while (!glfwWindowShouldClose(window))
     {
-
         if (dirtyViewport)
         {
             glViewport(0, 0, screenWidth, screenHeight);
-            // add as camera_resize(screenWidth, screenHeight);
-            glm_perspective(glm_rad(FOV), SCREEN_ASPECT, NEAR_PLANE, FAR_PLANE, camera.projection);
-            glm_mat4_inv(camera.projection, camera.inv_projection);
-            glm_mat4_mul(camera.projection, camera.view, camera.projectionView);
+            camera_resize(&camera, screenWidth, screenHeight);
             dirtyViewport = false;
         }
+
+        _update_fps_counter(window);
 
         const double currentFrame = glfwGetTime();
         const double deltatime = currentFrame - lastFrame;
         lastFrame = currentFrame;
 
         // UPDATE
-        camera_update(&camera, window, deltatime);
+        camera_update_fps(&camera, window, deltatime);
         planet_update(planet);
 
         // RENDER
@@ -135,6 +151,7 @@ static int initialize_gl(int width, int height, const char *title)
     glfwSetFramebufferSizeCallback(window, resize_callback);
     glfwSetKeyCallback(window, key_callback);
     glfwSetCursorPosCallback(window, camera_handle_mouse);
+    glfwSetMouseButtonCallback(window, mouse_button_callback);
 
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
@@ -210,6 +227,23 @@ static void key_callback(GLFWwindow *window, int key, int scancode, int action, 
 #endif
                 glfwSetWindowShouldClose(window, 1);
         }
+    }
+}
+
+/*
+static void mouse_click_callback(int b, int s, int mouse_x, int mouse_y)
+{
+    printf("MOUSE CLICK: b: %i s: %i   (%i, %i)\n", b,s, mouse_x, mouse_y);
+}
+*/
+
+static void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
+{
+    //printf("button: %i, action: %i, mods: %i\n", button, action, mods);
+    if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS)
+    {
+        printf("left mouse down\n");
+
     }
 }
 
