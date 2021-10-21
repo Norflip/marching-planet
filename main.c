@@ -77,22 +77,15 @@ int main()
 
         // UPDATE
         camera_update(&camera, window, deltatime);
-        //planet_update(planet);
+        planet_update(planet);
 
         // RENDER
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         skybox_draw(&camera);
-        // planet_draw(planet);
-
-        log_info("AA");
+        planet_draw(&camera, planet);
 
         glfwSwapBuffers(window);
-
-        log_info("BB");
-
         glfwPollEvents();
-
-        log_info("CC");
     }
 
     log_info("exiting");

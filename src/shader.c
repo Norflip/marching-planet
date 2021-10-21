@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <string.h>
 
 #include "shader.h"
 #include "log.h"
@@ -50,9 +51,75 @@ static inline char *shader_ReadTextFile(const char *path)
     }
 }
 
+static void process_file (char** file)
+{
+    char * result = NULL;
+    char line[256];
+
+    const char *tag = "#pragma include";
+    const size_t tag_length = strlen(tag);
+    const size_t file_length = strlen(*file);
+
+    char path_buffer [256];
+
+    char *curLine = *file;
+    while (curLine)
+    {
+        char *nextLine = strchr(curLine, '\n');
+        if (strncmp(curLine, tag, tag_length) == 0)
+        {
+            size_t index = 0;
+            size_t startIndex = -1;
+
+            char* c = nextLine;
+            while (c != '\n' && c != '\0' && index < 256)
+            {
+                if(startIndex != -1)
+                    path_buffer[index++] = *c;
+
+                if(*c == '"')
+                {
+                    if(startIndex == -1)
+                        startIndex = c - nextLine;
+                    else
+                        break;
+                }
+
+                c++;
+            }
+
+            path_buffer[index-1] = '\0';
+
+            printf("path: '%s'\n", path_buffer);
+            char* included_file = shader_ReadTextFile(path_buffer);
+
+            const size_t include_length = strlen(included_file);
+            const size_t pos = (curLine - *file);
+
+            size_t totlength = file_length + include_length + 1; 
+            char* result = malloc(totlength);
+
+            strncpy(result, *file, pos);
+            result[pos] = '\0';
+            strcat(result, included_file);
+            strcat(result, nextLine);
+
+            free(*file);
+            *file = result;
+            return;
+        }
+
+        if (nextLine)
+            *nextLine = '\n'; // then restore newline-char, just to be tidy
+        curLine = nextLine ? (nextLine + 1) : NULL;
+    }
+}
+
 static GLuint load_shader_part(const char *path, GLenum type)
 {
     char *file = shader_ReadTextFile(path);
+    process_file(&file);
+
 
     GLuint shader = glCreateShader(type);
     glShaderSource(shader, 1, &file, NULL);
@@ -75,6 +142,7 @@ static GLuint load_shader_part(const char *path, GLenum type)
 
     return shader;
 }
+
 
 Shader* shader_load(const char *vs, const char *fs)
 {
@@ -177,12 +245,14 @@ ComputeShader* computeshader_load (const char* path)
     ComputeShader* cs = malloc(sizeof(ComputeShader));
     cs->path = path;
     
+    // insert shader part here instead
+    // load_shader_part
     GLuint shader = glCreateShader(GL_COMPUTE_SHADER);
-    char* str = shader_ReadTextFile(path);
-
-    glShaderSource(shader, 1, &str, NULL);
+    char* file = shader_ReadTextFile(path);
+    process_file(&file);
+    
+    glShaderSource(shader, 1, &file, NULL);
     glCompileShader(shader);
-    free(str);
     
     // flytta till utils
     int params = -1;
@@ -190,6 +260,12 @@ ComputeShader* computeshader_load (const char* path)
 
     if (GL_TRUE != params)
     {
+        
+        FILE* f = fopen("compiled_shader_result.txt", "w");
+        fprintf(f, file);
+        fclose(f);
+        free(file);
+
         log_error("GL shader %s, index %i did not compile\noutput to log/shader_output.txt\n", path, shader);
 
         static char program_log_buffer[MAX_ENTRY_LENGTH];
@@ -198,6 +274,9 @@ ComputeShader* computeshader_load (const char* path)
         log_error("shader info log for GL index %u:\n%s\n", shader, program_log_buffer);
         return 0;
     }
+
+    free(file);
+
 
     GLuint program = glCreateProgram();
     glAttachShader(program, shader);

@@ -1,6 +1,6 @@
 #ifndef __PLANET__
 #define __PLANET__
-
+#include "../camera.h"
 
 typedef struct Chunk Chunk;
 typedef struct Planet Planet;
@@ -10,7 +10,7 @@ void planet_release_shared (void);
 
 Planet* planet_generate(void);
 void planet_update (Planet* planet);
-void planet_draw (Planet* planet);
+void planet_draw (Camera* camera, Planet* planet);
 void planet_release(Planet* planet);
 
 void chunk_create (Chunk* chunk);
