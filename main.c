@@ -149,6 +149,7 @@ static int initialize_gl(int width, int height, const char *title)
     */
 
     glfwSetFramebufferSizeCallback(window, resize_callback);
+    
     glfwSetKeyCallback(window, key_callback);
     glfwSetCursorPosCallback(window, camera_handle_mouse);
     glfwSetMouseButtonCallback(window, mouse_button_callback);

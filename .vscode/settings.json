@@ -11,6 +11,7 @@
         "utils.h": "c",
         "log.h": "c",
         "blocks.h": "c",
-        "window.h": "c"
+        "window.h": "c",
+        "stdbool.h": "c"
     }
 }

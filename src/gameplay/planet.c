@@ -46,6 +46,13 @@ struct Planet
     GLuint densityBuffer;
 };
 
+struct Vertex
+{
+    float x,y,z,w;
+    float nx, ny, nz;
+    float pad0;
+};
+
 static ComputeShader *meshCS = NULL;
 static ComputeShader *densityCS = NULL;
 static Shader *planetShader = NULL;
@@ -108,9 +115,9 @@ Planet *planet_generate(void)
 
                 // kanske måste flyttas till update om chunks ändras utanför init
                 const int max_verts = CHUNK_VOLUME * 5 * 3;
-                const int vertex_size = 4 * sizeof(float);
+                
                 glBindBuffer(GL_SHADER_STORAGE_BUFFER, chunk->vbo);
-                glBufferData(GL_SHADER_STORAGE_BUFFER, max_verts * vertex_size, NULL, GL_DYNAMIC_DRAW);
+                glBufferData(GL_SHADER_STORAGE_BUFFER, max_verts * sizeof(struct Vertex), NULL, GL_DYNAMIC_DRAW);
                 glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 
                 index++;
@@ -165,8 +172,8 @@ void planet_update(Planet *planet)
             /*
                 MESH BUFFER
             */
-            const int max_verts = CHUNK_VOLUME * 5 * 3;
-            const int vertex_size = 4 * sizeof(float);
+            //const int max_verts = CHUNK_VOLUME * 5 * 3;
+            //const int vertex_size = 4 * sizeof(float);
 
 
             /*
@@ -209,8 +216,13 @@ void planet_update(Planet *planet)
             glBindBuffer(GL_ARRAY_BUFFER, chunk->vbo);
 
             // position attribute
-            glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, vertex_size, (void *)0);
+            glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, sizeof(struct Vertex), (void *)0);
             glEnableVertexAttribArray(0);
+
+            // normal attribute
+            glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(struct Vertex), (void *)(sizeof(float) * 4));
+            glEnableVertexAttribArray(1);
+            
 
             glBindVertexArray(0);
 

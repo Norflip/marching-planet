@@ -281,6 +281,8 @@ const int triangulation[256][16] = {
 struct Vertex
 {
     vec4 position;
+    vec3 normal;
+    float pad0;
 };
 
 struct Triangle
@@ -290,12 +292,23 @@ struct Triangle
     Vertex C;
 };
 
+const ivec3 cube_corners [8] = {
+	ivec3(0, 0, 0),
+	ivec3(1, 0, 0),
+	ivec3(1, 0, 1),
+	ivec3(0, 0, 1),
+	ivec3(0, 1, 0),
+	ivec3(1, 1, 0),
+	ivec3(1, 1, 1),
+	ivec3(0, 1, 1),
+};
+
 layout (location = 0) uniform int textureSize;
 layout (location = 1) uniform float planetSize;
 layout (location = 2) uniform ivec3 chunkCoord;
 
 layout(binding = 0) uniform atomic_uint tris_counter;
-layout(std140, binding = 1) writeonly buffer triangle_buffer { Triangle triangles[]; };
+layout(std430, binding = 1) writeonly buffer triangle_buffer { Triangle triangles[]; };
 layout(std430, binding = 2) readonly buffer density_data { float density []; };
 
 
@@ -314,6 +327,18 @@ float SampleDensity (ivec3 coord)
     return density[FLATTEN(coord)];
 }
 
+vec3 calculateNormal(ivec3 coord) {
+	ivec3 offsetX = ivec3(1, 0, 0);
+	ivec3 offsetY = ivec3(0, 1, 0);
+	ivec3 offsetZ = ivec3(0, 0, 1);
+
+	float dx = SampleDensity(coord + offsetX) - SampleDensity(coord - offsetX);
+	float dy = SampleDensity(coord + offsetY) - SampleDensity(coord - offsetY);
+	float dz = SampleDensity(coord + offsetZ) - SampleDensity(coord - offsetZ);
+
+	return normalize(vec3(dx, dy, dz));
+}
+
 Vertex CreateVertex (ivec3 coordA, ivec3 coordB)
 {
     vec3 posA = CellToWorld(coordA);
@@ -325,9 +350,14 @@ Vertex CreateVertex (ivec3 coordA, ivec3 coordB)
     float t = (ISO_LEVEL - densityA) / (densityB - densityA);
     vec3 pos = posA + t * (posB - posA);
 
+    // Normal:
+	vec3 normalA = calculateNormal(coordA);
+	vec3 normalB = calculateNormal(coordB);
+	vec3 normal = normalize(normalA + t * (normalB - normalA));
+
     Vertex v;
     v.position = vec4(pos, 1.0);
-    //v.position = vec4((posA + posB) * 0.5, 1.0);
+    v.normal = normal;
     return v;
 }
 
@@ -339,22 +369,13 @@ void main ()
     ivec3 coord = pos + chunkCoord;
 
     ivec3 cornerCoords[8];
-	cornerCoords[0] = coord + ivec3(0, 0, 0);
-	cornerCoords[1] = coord + ivec3(1, 0, 0);
-	cornerCoords[2] = coord + ivec3(1, 0, 1);
-	cornerCoords[3] = coord + ivec3(0, 0, 1);
-	cornerCoords[4] = coord + ivec3(0, 1, 0);
-	cornerCoords[5] = coord + ivec3(1, 1, 0);
-	cornerCoords[6] = coord + ivec3(1, 1, 1);
-	cornerCoords[7] = coord + ivec3(0, 1, 1);
-
     int cubeConfiguration = 0;
+
     for(int j = 0; j < 8; j++)
     {
+        cornerCoords[j] = coord + cube_corners[j];
         if(SampleDensity(cornerCoords[j]) < ISO_LEVEL)
-        {
             cubeConfiguration |= (1 << j);
-        }
     }
 
     int edgeIndicies[] = triangulation[cubeConfiguration];
@@ -364,23 +385,24 @@ void main ()
         if(edgeIndicies[i] == -1)
             break;
     
-        Triangle tri;
-        
         int edgeIndexA = edgeIndicies[i];
         int a0 = cornerIndexAFromEdge[edgeIndexA];
         int a1 = cornerIndexBFromEdge[edgeIndexA];
-        tri.A = CreateVertex(cornerCoords[a0], cornerCoords[a1]);
 
         int edgeIndexB = edgeIndicies[i + 1];
         int b0 = cornerIndexAFromEdge[edgeIndexB];
         int b1 = cornerIndexBFromEdge[edgeIndexB];
-        tri.B = CreateVertex(cornerCoords[b0], cornerCoords[b1]);
-
+        
         int edgeIndexC = edgeIndicies[i + 2];
         int c0 = cornerIndexAFromEdge[edgeIndexC];
         int c1 = cornerIndexBFromEdge[edgeIndexC];
-        tri.C = CreateVertex(cornerCoords[c0], cornerCoords[c1]);
         
+        Triangle tri;
+        tri.A = CreateVertex(cornerCoords[a0], cornerCoords[a1]);
+        tri.B = CreateVertex(cornerCoords[b0], cornerCoords[b1]);
+        tri.C = CreateVertex(cornerCoords[c0], cornerCoords[c1]);
+
+
         uint tri_index = atomicCounterIncrement(tris_counter);
         triangles[tri_index] = tri;
     }
